@@ -32,6 +32,9 @@ def validate_entry(text):
         return False, "entry is %d characters, must be 1-200" % len(text)
     if "\n" in text or "\r" in text:
         return False, "entry must be a single line"
+    bad = [c for c in text if (ord(c) < 32 and c != "\t") or ord(c) == 127]
+    if bad:
+        return False, "entry contains control character U+%04X" % ord(bad[0])
     if text != text.strip():
         return False, "entry has leading or trailing whitespace"
     return True, "valid: %d characters, %d bytes, single line" % (
@@ -57,6 +60,11 @@ def self_test():
     if not ok:
         print("FAIL: %s" % reason)
         return 1
+    bad_ok, _bad_reason = validate_entry(ENTRY[:20] + "\x07" + ENTRY[20:])
+    if bad_ok:
+        print("FAIL: control-character entry was accepted")
+        return 1
+    print("PASS: control-character entry rejected")
     data = write_entry()
     roundtrip = OUTPUT_PATH.read_bytes()
     if roundtrip != data:
